@@ -4,7 +4,7 @@
 #include "vector.h"
 
 
-typedef struct KNNGraph_ {
+struct KNNGraph_ {
 	uint32_t k;
 	uint32_t dim;
 	uint32_t points;
