@@ -1,0 +1,12 @@
+[build-system]
+requires = ["sip"]
+build-backend = "sipbuild.api"
+
+[project]
+name = "cnndescent"
+
+[tool.sip.bindings.cnndescent]
+headers = ["knngraph.h"]
+include-dirs = ["include/"]
+libraries = ["knngraph", "gomp"]
+library-dirs = ["bin/"]
