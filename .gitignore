@@ -1,0 +1,4 @@
+.vscode/
+*.json
+build/*
+bin/*
