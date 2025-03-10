@@ -12,12 +12,19 @@ KNNGraph KNNGraph_create(float **data, DistanceFunc dist, uint32_t k,
 	
 	graph->k = k;
 	graph->dim = dim;
-	graph->data = data;
+	graph->data = data != NULL ? data : vector_create(float*, VEC_MIN_CAP);
 	graph->dist = dist;
 	graph->points = points;
 	graph->similarity_comparisons = 0;
 
 	return graph;
+}
+
+void KNNGraph_add_point(KNNGraph graph, float *point) {
+	vector_insert(graph->data, malloc((graph->dim + 1) * sizeof(float)));
+	memcpy(graph->data[graph->points], point, graph->dim * sizeof(float));
+	graph->data[graph->points][graph->dim] = dot_product(point, point, graph->dim);
+	graph->points++;
 }
 
 /* Build graph by exhaustively computing distances between all pairs of points  */

@@ -19,6 +19,8 @@ typedef struct KNNGraph_* KNNGraph;
 KNNGraph KNNGraph_create(float **data, DistanceFunc dist, uint32_t k, 
 	                     uint32_t dim, uint32_t points);
 
+void KNNGraph_add_point(KNNGraph graph, float *point);
+
 void KNNGraph_bruteforce(KNNGraph graph);
 
 void KNNGraph_nndescent(KNNGraph graph, float precision, float sample_rate, uint32_t n_trees);
