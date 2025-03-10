@@ -4,7 +4,7 @@
 #include "vector.h"
 
 
-typedef struct KNNGraph {
+typedef struct KNNGraph_ {
 	uint32_t k;
 	uint32_t dim;
 	uint32_t points;
@@ -12,7 +12,9 @@ typedef struct KNNGraph {
 	Neighbor **neighbors;
 	DistanceFunc dist;
 	uint32_t similarity_comparisons;
-} *KNNGraph;
+};
+
+typedef struct KNNGraph_* KNNGraph;
 
 KNNGraph KNNGraph_create(float **data, DistanceFunc dist, uint32_t k, 
 	                     uint32_t dim, uint32_t points);
