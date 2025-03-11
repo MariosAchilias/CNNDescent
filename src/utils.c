@@ -9,86 +9,9 @@ static void reverse_bytes(char *bytes);
 
 uint32_t n_threads = 1;
 
-
-/* This reading function is used **ONLY** for reading datasets
- * from SIGMOD and from https://www.cs.du.edu/~leut/MultiDimData.html.
- * User must set explicitly the proper arguments like endianess, dimension etc.
- * For more information check include/common.h KnnArgs struct attributes
- */
-void import_dataset(KnnArgs *args) {
-	int fd;
-	char *file;
-	struct stat buffer;	
-	uint32_t offset = (!args->big_endian) * sizeof(uint32_t);
-	uint32_t size = sizeof(float) * args->dim;
-
-
-	CHECK_CALL(fd = open(args->file, O_RDONLY), -1);
-	CHECK_CALL(fstat(fd, &buffer), -1);
-	CHECK_CALL(file = mmap(NULL, buffer.st_size, 
-	                       PROT_READ | PROT_WRITE, 
-						   MAP_PRIVATE, fd, 0), MAP_FAILED);
-
-	uint32_t numbers = buffer.st_size / sizeof(uint32_t);
-	args->points = (numbers - !args->big_endian) / args->dim;
-
-
-	CHECK_CALL(args->data = malloc(sizeof(float*) * args->points), NULL);
-	for (size_t i = 0UL; i < args->points; ++i) {
-		CHECK_CALL(args->data[i] = malloc((args->dim + 1) * sizeof(float)), NULL);
-		if (args->big_endian)
-			for (uint32_t row = 0; row < args->dim; ++row)
-				reverse_bytes(file + offset + row * sizeof(float));
-
-		memcpy(args->data[i], file + offset, size);
-		args->data[i][args->dim] = dot_product(args->data[i], args->data[i], args->dim);
-		file += size;
-	}
-
-	CHECK_CALL(munmap(file - args->points * size, buffer.st_size), -1);
-	CHECK_CALL(close(fd), -1);
-}
-
-
-/* Used to parse arguments in knn_app (format described in README) */
-bool parse_args(int argc, const char **argv, KnnArgs *args) {
-	for (size_t i = 0UL; i < argc - 1; ++i) {
-		if (strcmp("-file", argv[i + 1]) == 0) {
-			args->file = argv[i + 2];
-		} else if (strcmp("-k", argv[i + 1]) == 0) {
-			if (!str_to_int(argv[i + 2], &args->k))
-				return false;   
-		} else if (strcmp("-dim", argv[i + 1]) == 0) {
-			if (!str_to_int(argv[i + 2], &args->dim))
-				return false;
-		} else if (strcmp("-endian", argv[i + 1]) == 0) {
-			args->big_endian = strcmp(argv[i + 2], "big") == 0;
-		} else if (strcmp("-metric", argv[i + 1]) == 0) {
-			args->metric = !strcmp(argv[i + 2], "euclidean")     ? euclidean_dist      :      
-			               !strcmp(argv[i + 2], "euclidean_opt") ? optimized_euclidean :
-						   manhattan_dist;
-		} else if (strcmp("-sample", argv[i + 1]) == 0) {
-			if (!str_to_float(argv[i + 2], &args->sample_rate))
-				return false;
-		} else if (strcmp("-precision", argv[i + 1]) == 0) {
-			if (!str_to_float(argv[i + 2], &args->precision))
-				return false;
-		} else if (strcmp("-threads", argv[i + 1]) == 0) {
-			if (!str_to_int(argv[i + 2], &n_threads))
-				return false;
-		} else if (strcmp("-trees", argv[i + 1]) == 0) {
-			if (!str_to_int(argv[i + 2], &args->n_trees))
-				return false;
-		}
-	}
-	return args->metric && args->k && args->dim && args->file;
-}
-
-
 int cmp_ids(Neighbor a, Neighbor b) {
 	return a.id - b.id;
 }
-
 
 float manhattan_dist(float *f1, float *f2, uint32_t dim) {
 	float dist = 0;
