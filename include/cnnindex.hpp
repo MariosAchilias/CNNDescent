@@ -18,6 +18,7 @@ public:
     KNNGraph graph;
     CNNIndex(int k, int dim, enum Dist dist) : k(k), dim(dim) {this->graph = KNNGraph_create(NULL, dist == EUCLIDEAN ?  euclidean_dist : manhattan_dist, k, dim, 0);};
     ~CNNIndex() {KNNGraph_destroy(graph);};
+    void set_n_threads(int n) {n_threads = n;};
     void add_point(float *point) {KNNGraph_add_point(this->graph, point);};
     void build_index_bruteforce() {KNNGraph_bruteforce(this->graph);};
     void build_index_nndescent(float precision, float sample_rate, int n_trees) {KNNGraph_nndescent(this->graph, precision, sample_rate, n_trees);};
@@ -30,5 +31,5 @@ public:
         free(knn);
         return knn_;
     }
-
+ 
 };

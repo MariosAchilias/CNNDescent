@@ -7,13 +7,14 @@ enum Dist {
 
 class CNNIndex {
     %TypeHeaderCode
-    #include <knngraph.hpp>
+    #include <cnnindex.hpp>
     %End
 public:
     int k;
     int dim;
     CNNIndex(int k, int dim, Dist dist);
     ~CNNIndex();
+    void set_n_threads(int n);
     void build_index_bruteforce();
     void build_index_nndescent(float precision, float sample_rate, int n_trees);
     void add_point(SIP_PYLIST);
