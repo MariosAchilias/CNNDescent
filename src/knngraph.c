@@ -175,7 +175,7 @@ Neighbor *KNNGraph_KNearest(KNNGraph graph, float *point) {
 	vector_destroy(KNearest);
 	vector_destroy(candidates);
 
-	for (int i = 0; i < graph->points; i++)
+	for (size_t i = 0UL; i < graph->points; i++)
 		vector_destroy(graph_neighbors[i]);	
 	free(graph_neighbors);
 

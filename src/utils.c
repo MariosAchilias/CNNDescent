@@ -2,11 +2,6 @@
 #include "bitset.h"
 #include "rp_tree.h"
 
-
-static bool str_to_int(const char *s, uint32_t *num);
-static bool str_to_float(const char *s, float *num);
-static void reverse_bytes(char *bytes);
-
 uint32_t n_threads = 1;
 
 int cmp_ids(Neighbor a, Neighbor b) {
@@ -241,37 +236,6 @@ void get_reverse(KNNGraph graph, uint32_t **old, uint32_t **new, uint32_t **old_
 		vector_append(new[v], new_r[v], vector_size(new_r[v]));
 	}
 }
-
-
-static bool str_to_int(const char *s, uint32_t *num) {
-	char *endptr;
-	errno = 0;
-	*num = strtol(s, &endptr, 10);
-
-	return errno == 0 && endptr != s && *endptr == '\0';
-}
-
-
-static bool str_to_float(const char *s, float *num) {
-	char *endptr;
-	errno = 0;
-	*num = strtof(s, &endptr);
-
-	return errno == 0 && endptr != s && *endptr == '\0';
-}
-
-
-static void reverse_bytes(char *bytes) {
-	int32_t temp;
-	memcpy(&temp, bytes, sizeof(int32_t));
-
-	int32_t reversed = (temp << 8) & 0xFF00FF00;
-	reversed |= (temp >> 8) & 0xFF00FF;
-
-	reversed = (reversed << 16) | ((reversed >> 16) & 0xFFFF);
-	memcpy(bytes, &reversed, sizeof(int32_t));
-}
-
 
 float dot_product(float *f1, float *f2, uint32_t dim) {
 	float sum1 = 0.0;
