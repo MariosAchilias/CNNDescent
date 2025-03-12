@@ -8,7 +8,8 @@ KNNGraph KNNGraph_create(float **data, DistanceFunc dist, uint32_t k,
                          uint32_t dim, uint32_t points) {                      
 	KNNGraph graph;
     CHECK_CALL(graph = malloc(sizeof(*graph)), NULL);
-	CHECK_CALL(graph->neighbors = calloc(points, sizeof(Neighbor*)), NULL);
+	
+	graph->neighbors = points > 0 ? calloc(points, sizeof(Neighbor*)) : vector_create(Neighbor*, VEC_MIN_CAP);
 	
 	graph->k = k;
 	graph->dim = dim;
@@ -21,7 +22,11 @@ KNNGraph KNNGraph_create(float **data, DistanceFunc dist, uint32_t k,
 }
 
 void KNNGraph_add_point(KNNGraph graph, float *point) {
-	vector_insert(graph->data, malloc((graph->dim + 1) * sizeof(float)));
+	float *tmp = malloc((graph->dim + 1) * sizeof(float));
+	vector_insert(graph->data, tmp);
+	Neighbor *tmp_ = malloc(sizeof(Neighbor*));
+	vector_insert(graph->neighbors, tmp_);
+
 	memcpy(graph->data[graph->points], point, graph->dim * sizeof(float));
 	graph->data[graph->points][graph->dim] = dot_product(point, point, graph->dim);
 	graph->points++;
