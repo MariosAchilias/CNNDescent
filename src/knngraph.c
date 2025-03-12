@@ -9,7 +9,11 @@ KNNGraph KNNGraph_create(float **data, DistanceFunc dist, uint32_t k,
 	KNNGraph graph;
     CHECK_CALL(graph = malloc(sizeof(*graph)), NULL);
 	
-	graph->neighbors = points > 0 ? calloc(points, sizeof(Neighbor*)) : vector_create(Neighbor*, VEC_MIN_CAP);
+	graph->neighbors = vector_create(Neighbor*, VEC_MIN_CAP);
+	for (size_t i = 0UL; i < points; i++) {
+		Neighbor *tmp = malloc(k * sizeof(Neighbor));
+		vector_insert(graph->neighbors, tmp);
+	}
 	
 	graph->k = k;
 	graph->dim = dim;
@@ -257,6 +261,6 @@ void KNNGraph_destroy(KNNGraph graph) {
 		if (graph->neighbors[i] != NULL)
 			vector_destroy(graph->neighbors[i]);
 
-	free(graph->neighbors);
+	vector_destroy(graph->neighbors);
 	free(graph);
 }
