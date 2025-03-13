@@ -17,4 +17,71 @@ cd CNNDescent/clib
 Make
 ```
 
-To use C library, include ``include/knngraph.h``. A simple C++ wrapper is provided in ``include/cnndescent.hpp`` and should be used if C compatibility is not required (provides more intuitive interface and error handling).
+To use C library, include ``include/knngraph.h``. A simple C++ wrapper is provided in ``include/cnnindex.hpp`` and should be used if C compatibility is not required (provides more intuitive interface and error handling).
+
+## Usage
+### Python example
+```python
+import cnndescent
+import random
+
+index = CNNIndex(10, 5, cnndescent.Dist.EUCLIDEAN)
+for i in range(100):
+    point = [random.gauss(0, 100) for j in range(5)]
+    index.add_point(point)
+
+index.build_index_nndescent(0.001, 0.5, 10)
+index.save("test_graph.bin")
+
+...
+
+index = CNNIndex("test_graph.bin")
+# print nearest neighbor id and distance pairs for first 10 data points
+for i in range(10):
+    print(index.get_k_nearest(i)) 
+
+# query graph for nearest neighbors of random data point (not in dataset)
+print(index.get_k_nearest([random.gauss(0, 100) for i in range(5)]))
+```
+
+### C example
+```c
+#include "include/knngraph.h"
+#include "include/utils.h"
+
+int main(void) {
+    int data_dim = 5;
+    int n = 100;
+    int k = 10;
+
+    float *data[n];
+    for (int i = 0; i < n; i++) {
+        data[i] = malloc(data_dim * sizeof(float));
+        for (int j = 0; j < data_dim; j++)
+            data[i][j] = 100 * ((float) rand()) / ((float) RAND_MAX));
+    }
+
+    KNNGraph graph = KNNGraph_create(data, euclidean_dist, k, data_dim, n);
+    KNNGraph_nndescent(graph, 0.001, 0.5, 10);
+    KNNGraph_export_graph(graph, "test_graph.bin")
+    ...
+    graph = KNNGraph_import_graph("test_graph.bin", data, euclidean_dist);
+
+    # get k nearest neighbors of first 10 data points
+    Neighbor *kn;
+    for (int i = 0; i < 10; i++) {
+        kn = graph->neighbors[i];
+        for (int j = 0; j < k; j++)
+            printf("(%d, %f), ", kn[j].id, kn[j].dist);
+        printf("\n");
+    }
+
+
+    # query graph for nearest neighbors of random data point (not in dataset)
+    float query_point[] = {0.0, 1.0, 2.0, 3.0, 4.0};
+    kn = KNNGraph_KNearest(graph, query_point);
+    for (int i = 0; i < k; i++)
+        printf("(%d, %f), ", kn[i].id, kn[i].dist);
+    printf("\n");
+
+}
