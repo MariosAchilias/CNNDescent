@@ -69,7 +69,7 @@ int main(void) {
     ...
     graph = KNNGraph_import_graph("test_graph.bin", data, euclidean_dist);
 
-    # get k nearest neighbors of first 10 data points
+    /* get k nearest neighbors of first 10 data points */
     Neighbor *kn;
     for (int i = 0; i < 10; i++) {
         kn = graph->neighbors[i];
@@ -79,7 +79,7 @@ int main(void) {
     }
 
 
-    # query graph for nearest neighbors of random data point (not in dataset)
+    /* query graph for nearest neighbors of random data point (not in dataset) */
     float query_point[] = {0.0, 1.0, 2.0, 3.0, 4.0};
     kn = KNNGraph_KNearest(graph, query_point);
     for (int i = 0; i < k; i++)
