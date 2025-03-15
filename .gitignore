@@ -1,4 +1,4 @@
 .vscode/
 *.json
-build/*
-bin/*
+c_lib/build/*
+c_lib/bin/*

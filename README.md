@@ -13,11 +13,13 @@ pip install cnndescent
 
 ```sh
 git clone https://github.com/MariosAchilias/CNNDescent.git
-cd CNNDescent/clib
-Make
+cd CNNDescent/c_lib
+make
 ```
 
 To use C library, include ``include/knngraph.h``. A simple C++ wrapper is provided in ``include/cnnindex.hpp`` and should be used if C compatibility is not required (provides more intuitive interface and error handling).
+
+Link with ``c_lib/bin/libknngraph.so``.
 
 ## Usage
 ### Python example
