@@ -51,7 +51,7 @@ typedef struct {
 	uint32_t n_trees;
 	bool big_endian;
 	const char *file;
-	float **data;
+	float *data;
 	DistanceFunc metric;    
 	float sample_rate;
 	float precision;

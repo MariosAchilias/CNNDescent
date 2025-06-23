@@ -2,7 +2,83 @@
 #include "bitset.h"
 #include "rp_tree.h"
 
+// static void reverse_bytes(char *bytes);
+static bool str_to_float(const char *s, float *num);
+static bool str_to_int(const char *s, uint32_t *num);
+
 uint32_t n_threads = 1;
+
+void import_dataset(KnnArgs *args) {
+	int fd;
+	char *file;
+	struct stat buffer;	
+	uint32_t offset = (!args->big_endian) * sizeof(uint32_t);
+	uint32_t size = sizeof(float) * args->dim;
+
+
+	CHECK_CALL(fd = open(args->file, O_RDONLY), -1);
+	CHECK_CALL(fstat(fd, &buffer), -1);
+	CHECK_CALL(file = mmap(NULL, buffer.st_size, 
+	                       PROT_READ | PROT_WRITE, 
+						   MAP_PRIVATE, fd, 0), MAP_FAILED);
+
+	uint32_t numbers = buffer.st_size / sizeof(uint32_t);
+	args->points = (numbers - !args->big_endian) / args->dim;
+
+
+	CHECK_CALL(args->data = malloc(sizeof(float) * (args->dim + 1) * args->points), NULL);
+	for (size_t i = 0UL; i < args->points; ++i) {
+		// args->data[i] = malloc((args->dim + 1) * sizeof(float)), NULL);
+
+		// if (args->big_endian)
+			// for (uint32_t row = 0; row < args->dim; ++row)
+			// 	reverse_bytes(file + offset + row * sizeof(float));
+
+		uint32_t loc = i * (args->dim + 1);
+		memcpy(&args->data[loc], file + offset, size);
+		args->data[loc + args->dim] = dot_product(&args->data[loc], &args->data[loc], args->dim);
+		file += size;
+	}
+
+	CHECK_CALL(munmap(file - args->points * size, buffer.st_size), -1);
+	CHECK_CALL(close(fd), -1);
+}
+
+
+/* Used to parse arguments in knn_app (format described in README) */
+bool parse_args(int argc, const char **argv, KnnArgs *args) {
+	for (size_t i = 0UL; i < argc - 1; ++i) {
+		if (strcmp("-file", argv[i + 1]) == 0) {
+			args->file = argv[i + 2];
+		} else if (strcmp("-k", argv[i + 1]) == 0) {
+			if (!str_to_int(argv[i + 2], &args->k))
+				return false;   
+		} else if (strcmp("-dim", argv[i + 1]) == 0) {
+			if (!str_to_int(argv[i + 2], &args->dim))
+				return false;
+		} else if (strcmp("-endian", argv[i + 1]) == 0) {
+			args->big_endian = strcmp(argv[i + 2], "big") == 0;
+		} else if (strcmp("-metric", argv[i + 1]) == 0) {
+			args->metric = !strcmp(argv[i + 2], "euclidean")     ? euclidean_dist      :      
+			               !strcmp(argv[i + 2], "euclidean_opt") ? optimized_euclidean :
+						   manhattan_dist;
+		} else if (strcmp("-sample", argv[i + 1]) == 0) {
+			if (!str_to_float(argv[i + 2], &args->sample_rate))
+				return false;
+		} else if (strcmp("-precision", argv[i + 1]) == 0) {
+			if (!str_to_float(argv[i + 2], &args->precision))
+				return false;
+		} else if (strcmp("-threads", argv[i + 1]) == 0) {
+			if (!str_to_int(argv[i + 2], &n_threads))
+				return false;
+		} else if (strcmp("-trees", argv[i + 1]) == 0) {
+			if (!str_to_int(argv[i + 2], &args->n_trees))
+				return false;
+		}
+	}
+	return args->metric && args->k && args->dim && args->file;
+}
+
 
 int cmp_ids(Neighbor a, Neighbor b) {
 	return a.id - b.id;
@@ -53,8 +129,8 @@ void graph_init_rp(KNNGraph graph, uint32_t n_trees) {
 				for (size_t k = j + 1; k < vector_size(forest[tree_i]->nodes[i].data); ++k) {
 					uint32_t u2 = forest[tree_i]->nodes[i].data[k];
 
-					float dist = graph->dist(graph->data[u1],
-											 graph->data[u2],
+					float dist = graph->dist(&graph->data[u1 * (graph->dim + 1)],
+											 &graph->data[u2 * (graph->dim + 1)],
 											 graph->dim);
 
 
@@ -90,8 +166,8 @@ void graph_init(KNNGraph graph) {
 			while (num == i)
 				num = rand() % graph->points;
 			
-			float dist = graph->dist(graph->data[i],
-									 graph->data[num],
+			float dist = graph->dist(&graph->data[i * (graph->dim + 1)],
+									 &graph->data[num * (graph->dim + 1)],
 									 graph->dim);
 
 			vector_sorted_insert(graph->neighbors[i], 
@@ -127,7 +203,7 @@ Neighbor **get_reverse_neighbors(KNNGraph graph) {
 Neighbor *get_knearest(KNNGraph graph, float *point) {
 	Neighbor *KNearest = vector_create(Neighbor, graph->k + 1);
 	for (size_t i = 0UL; i < graph->points; ++i) {
-		float dist = graph->dist(graph->data[i], point, graph->dim);
+		float dist = graph->dist(&graph->data[i * (graph->dim + 1)], point, graph->dim);
 		vector_sorted_insert(KNearest, ((Neighbor) {.id = i, .dist = dist}));
 	}
 
@@ -256,3 +332,33 @@ float dot_product(float *f1, float *f2, uint32_t dim) {
 	
 	return sum1 + sum2 + sum3 + sum4;
 }
+
+
+static bool str_to_int(const char *s, uint32_t *num) {
+	char *endptr;
+	errno = 0;
+	*num = strtol(s, &endptr, 10);
+
+	return errno == 0 && endptr != s && *endptr == '\0';
+}
+
+
+static bool str_to_float(const char *s, float *num) {
+	char *endptr;
+	errno = 0;
+	*num = strtof(s, &endptr);
+
+	return errno == 0 && endptr != s && *endptr == '\0';
+}
+
+
+// static void reverse_bytes(char *bytes) {
+// 	int32_t temp;
+// 	memcpy(&temp, bytes, sizeof(int32_t));
+
+// 	int32_t reversed = (temp << 8) & 0xFF00FF00;
+// 	reversed |= (temp >> 8) & 0xFF00FF;
+
+// 	reversed = (reversed << 16) | ((reversed >> 16) & 0xFFFF);
+// 	memcpy(bytes, &reversed, sizeof(int32_t));
+// }

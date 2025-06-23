@@ -13,16 +13,16 @@ struct node {
 
 typedef struct rp_tree {
     struct node *nodes;
-    float **data;
+    float *data;
     uint32_t leaf_size;
     uint32_t points;
     uint32_t dimension;
     unsigned int seed;
 } *RPTree;
 
-RPTree RPTree_create(float **data, uint32_t points, uint32_t dimension, uint32_t leaf_size);
+RPTree RPTree_create(float *data, uint32_t points, uint32_t dimension, uint32_t leaf_size);
 
-RPTree *RPTree_build_forest(uint32_t n_trees, float **data, uint32_t points, 
+RPTree *RPTree_build_forest(uint32_t n_trees, float *data, uint32_t points, 
                             uint32_t dimension, uint32_t leaf_size);
 
 void RPTree_split(RPTree tree);

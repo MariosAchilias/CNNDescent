@@ -8,7 +8,7 @@ struct KNNGraph_ {
 	uint32_t k;
 	uint32_t dim;
 	uint32_t points;
-	float **data;
+	float *data;
 	Neighbor **neighbors;
 	DistanceFunc dist;
 	uint32_t similarity_comparisons;
@@ -16,7 +16,7 @@ struct KNNGraph_ {
 
 typedef struct KNNGraph_* KNNGraph;
 
-KNNGraph KNNGraph_create(float **data, DistanceFunc dist, uint32_t k, 
+KNNGraph KNNGraph_create(float *data, DistanceFunc dist, uint32_t k, 
 	                     uint32_t dim, uint32_t points);
 
 void KNNGraph_add_point(KNNGraph graph, float *point);
@@ -31,7 +31,7 @@ float KNNGraph_recall(KNNGraph graph, KNNGraph ground_truth);
 
 void KNNGraph_destroy(KNNGraph graph);
 
-KNNGraph KNNGraph_import_graph(char *graph_file, float **data, DistanceFunc dist);
+KNNGraph KNNGraph_import_graph(char *graph_file, float *data, DistanceFunc dist);
 
 void KNNGraph_export_graph(KNNGraph graph, const char *filename);
 

@@ -3,7 +3,7 @@
 
 #define EPSILON 1e-4
 
-RPTree RPTree_create(float **data, uint32_t points, 
+RPTree RPTree_create(float *data, uint32_t points, 
                      uint32_t dimension, uint32_t leaf_size) {
     RPTree tree = malloc(sizeof(*tree));
     tree->leaf_size = leaf_size;
@@ -38,13 +38,13 @@ static uint32_t tree_split_rec(RPTree tree, uint32_t *data, uint32_t depth) {
         while (ind == ind_)
             ind_ = rand_r(&tree->seed) % tree->points;
         
-        hyperplane[i] = tree->data[ind][i] - tree->data[ind_][i];
-        offset += hyperplane[i] * (tree->data[ind][i] + tree->data[ind_][i]) / 2;
+        hyperplane[i] = tree->data[ind * (tree->dimension + 1) + i] - tree->data[ind_ * (tree->dimension + 1) + i];
+        offset += hyperplane[i] * (tree->data[ind * (tree->dimension + 1) + i] + tree->data[ind_ * (tree->dimension+ 1) + i]) / 2;
     }
 
     for (size_t i = 0; i < vector_size(data); i++) {
         /* Split data according to their projection onto the hyperplane */
-        float margin = dot_product(hyperplane, tree->data[data[i]], tree->dimension) - offset;
+        float margin = dot_product(hyperplane, &tree->data[data[i] * (tree->dimension + 1)], tree->dimension) - offset;
         if (margin < -EPSILON) {
             vector_insert(left, data[i]);
         } else if (margin > EPSILON) {
@@ -107,7 +107,7 @@ void RPTree_destroy(RPTree tree) {
 }
 
 
-RPTree *RPTree_build_forest(uint32_t n_trees, float **data, uint32_t points,
+RPTree *RPTree_build_forest(uint32_t n_trees, float *data, uint32_t points,
                            uint32_t dimension, uint32_t leaf_size) {
     RPTree *forest = malloc(sizeof(RPTree) * n_trees);
     # pragma omp parallel for num_threads(n_threads)

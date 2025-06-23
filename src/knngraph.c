@@ -4,7 +4,7 @@
 
 
 
-KNNGraph KNNGraph_create(float **data, DistanceFunc dist, uint32_t k, 
+KNNGraph KNNGraph_create(float *data, DistanceFunc dist, uint32_t k, 
                          uint32_t dim, uint32_t points) {                      
 	KNNGraph graph;
     CHECK_CALL(graph = malloc(sizeof(*graph)), NULL);
@@ -17,7 +17,7 @@ KNNGraph KNNGraph_create(float **data, DistanceFunc dist, uint32_t k,
 	
 	graph->k = k;
 	graph->dim = dim;
-	graph->data = data != NULL ? data : vector_create(float*, VEC_MIN_CAP);
+	graph->data = data != NULL ? data : vector_create(float, VEC_MIN_CAP);
 	graph->dist = dist;
 	graph->points = points;
 	graph->similarity_comparisons = 0;
@@ -26,14 +26,15 @@ KNNGraph KNNGraph_create(float **data, DistanceFunc dist, uint32_t k,
 }
 
 void KNNGraph_add_point(KNNGraph graph, float *point) {
-	float *tmp = malloc((graph->dim + 1) * sizeof(float));
-	vector_insert(graph->data, tmp);
-	Neighbor *tmp_ = malloc(sizeof(Neighbor*));
-	vector_insert(graph->neighbors, tmp_);
+	// TODO
+	// float *tmp = malloc((graph->dim + 1) * sizeof(float));
+	// vector_insert(graph->data, tmp);
+	// Neighbor *tmp_ = malloc(sizeof(Neighbor*));
+	// vector_insert(graph->neighbors, tmp_);
 
-	memcpy(graph->data[graph->points], point, graph->dim * sizeof(float));
-	graph->data[graph->points][graph->dim] = dot_product(point, point, graph->dim);
-	graph->points++;
+	// memcpy(graph->data[graph->points], point, graph->dim * sizeof(float));
+	// graph->data[graph->points][graph->dim] = dot_product(point, point, graph->dim);
+	// graph->points++;
 }
 
 /* Build graph by exhaustively computing distances between all pairs of points  */
@@ -46,7 +47,7 @@ void KNNGraph_bruteforce(KNNGraph graph) {
 	# pragma omp parallel for num_threads(n_threads)
 	for (size_t i = 0UL; i < graph->points; ++i) {
 		for (size_t j = i + 1; j < graph->points; ++j) {
-			float dist = graph->dist(graph->data[i], graph->data[j], graph->dim);
+			float dist = graph->dist(&graph->data[i * (graph->dim + 1)], &graph->data[j * (graph->dim + 1)], graph->dim);
 
 			omp_set_lock(vector_lock(graph->neighbors[i]));
 			vector_sorted_insert(graph->neighbors[i], ((Neighbor){.id = j, .dist = dist}));
@@ -92,8 +93,8 @@ void KNNGraph_nndescent(KNNGraph graph, float precision, float sample_rate, uint
 
 			for (size_t i = 0UL; i < vector_size(new[v]); ++i) {
 				for (size_t j = 0UL; j < vector_size(pairs[i].neighbors); ++j)
-					pairs[i].neighbors[j].dist = graph->dist(graph->data[pairs[i].id],
-															 graph->data[pairs[i].neighbors[j].id],
+					pairs[i].neighbors[j].dist = graph->dist(&graph->data[pairs[i].id * (graph->dim + 1)],
+															 &graph->data[pairs[i].neighbors[j].id * (graph->dim + 1)],
 															 graph->dim);
 			}
 
@@ -148,7 +149,7 @@ Neighbor *KNNGraph_KNearest(KNNGraph graph, float *point) {
 	Neighbor **graph_neighbors = get_reverse_neighbors(graph);
 
 	uint32_t start_node = rand() % graph->points;
-	float dist = graph->dist(graph->data[start_node], point, graph->dim);
+	float dist = graph->dist(&graph->data[start_node * (graph->dim + 1)], point, graph->dim);
 
 	vector_insert(candidates, ((Neighbor){.id = start_node, .dist = dist}));
 	BITSET_SET(candidates_inserted, start_node);
@@ -168,7 +169,7 @@ Neighbor *KNNGraph_KNearest(KNNGraph graph, float *point) {
 			if (BITSET_CHECK(candidates_inserted, neighbor))
 				continue;
 
-			float dist = graph->dist(graph->data[neighbor], point, graph->dim);
+			float dist = graph->dist(&graph->data[neighbor * (graph->dim + 1)], point, graph->dim);
 
 			vector_sorted_insert(candidates, ((Neighbor) {.id = neighbor, .dist = dist}));
 			BITSET_SET(candidates_inserted, neighbor);
@@ -194,7 +195,7 @@ Neighbor *KNNGraph_KNearest(KNNGraph graph, float *point) {
 }
 
 /* Import already computed graph from file (usable for searching and evaluation) */
-KNNGraph KNNGraph_import_graph(char *graph_file, float **data, DistanceFunc dist) {
+KNNGraph KNNGraph_import_graph(char *graph_file, float *data, DistanceFunc dist) {
     int fd;
 	CHECK_CALL(fd = open(graph_file, O_RDONLY), -1);
 
