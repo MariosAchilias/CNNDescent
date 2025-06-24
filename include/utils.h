@@ -8,7 +8,7 @@ void import_dataset(KnnArgs *args);
 
 int cmp_ids(Neighbor a, Neighbor b);
 
-bool parse_args(int argc, const char **argv, KnnArgs *args);
+bool parse_args(size_t argc, const char **argv, KnnArgs *args);
 
 float manhattan_dist(float const *f1, float const *f2, uint32_t dim);
 

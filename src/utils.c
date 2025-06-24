@@ -39,7 +39,7 @@ void import_dataset(KnnArgs *args) {
 
 
 /* Used to parse arguments in knn_app (format described in README) */
-bool parse_args(int argc, const char **argv, KnnArgs *args) {
+bool parse_args(size_t argc, const char **argv, KnnArgs *args) {
 	for (size_t i = 0UL; i < argc - 1; ++i) {
 		if (strcmp("-file", argv[i + 1]) == 0) {
 			args->file = argv[i + 2];

@@ -126,7 +126,7 @@ struct vector {
 
 
 #define vector_find(vec, __cmp, __entry) ({						\
-	size_t __index = 0UL;										\
+	ssize_t __index = 0UL;										\
 	while (__index < vector_size(vec)							\
 		&& __cmp(vec[__index++], __entry) != 0)					\
 		;														\
