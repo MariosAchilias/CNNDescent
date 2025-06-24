@@ -33,11 +33,15 @@ typedef struct {
 	bool flag;
 } Neighbor;
 
+typedef struct {
+	uint32_t id;
+	float dist;
+} Update;
 
 typedef struct {
 	uint32_t id;
-	Neighbor *neighbors;
-} Pair;
+	Update *updates;
+} NodeUpdates;
 
 typedef int (*Comparator)(Neighbor a, Neighbor b);
 typedef float (*DistanceFunc)(float const *a, float const *b, uint32_t dim);

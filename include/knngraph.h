@@ -11,7 +11,6 @@ struct KNNGraph_ {
 	float *data;
 	Neighbor **neighbors;
 	DistanceFunc dist;
-	uint32_t similarity_comparisons;
 };
 
 typedef struct KNNGraph_* KNNGraph;

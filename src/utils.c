@@ -256,34 +256,69 @@ void collect_sets(KNNGraph graph, uint32_t **old,
 }
 
 
-Pair *collect_pairs(uint32_t *old, uint32_t *new) {
-	Pair *pairs = malloc(vector_size(new) * sizeof(Pair));
+NodeUpdates *collect_updates(KNNGraph graph, uint32_t *old, uint32_t *new) {
+	NodeUpdates *updates = vector_create(NodeUpdates, vector_size(new));
 
 	for (size_t i = 0UL; i < vector_size(new); ++i) {
-		pairs[i].id = new[i];
-		pairs[i].neighbors = vector_create(Neighbor, VEC_MIN_CAP);
+		vector_insert(updates, ((NodeUpdates) {.id = new[i], .updates = vector_create(Update, VEC_MIN_CAP)}));	
 		for (size_t j = 0UL; j < vector_size(new); ++j) {
 			uint32_t u2 = new[j];
-			if (pairs[i].id >= u2)
+			if (updates[i].id >= u2)
 				continue;
 			
-			vector_insert(pairs[i].neighbors, ((Neighbor){.id = u2}));
+			vector_insert(updates[i].updates, ((Update){.id = u2}));
 		}
 
 		for (size_t j = 0UL; j < vector_size(old); ++j) {
 			uint32_t u2 = old[j];
-			if (pairs[i].id == u2)
+			if (updates[i].id == u2)
 				continue;
 
-			vector_insert(pairs[i].neighbors, ((Neighbor){.id = u2}));
+			vector_insert(updates[i].updates, ((Update){.id = u2}));
 		}
 	}
-	return pairs;
+
+	for (size_t i = 0UL; i < vector_size(new); ++i) {
+		for (size_t j = 0UL; j < vector_size(updates[i].updates); ++j)
+			updates[i].updates[j].dist = graph->dist(&graph->data[updates[i].id * (graph->dim + 1)],
+													 &graph->data[updates[i].updates[j].id * (graph->dim + 1)],
+													 graph->dim);
+	}
+
+	assert(vector_size(new) == vector_size(updates));
+	return updates;
 }
 
+uint32_t apply_updates(KNNGraph graph, NodeUpdates *updates) {
+	uint32_t c = 0;
+	
+	for (size_t i = 0UL; i < vector_size(updates); ++i) {
+		omp_set_lock(vector_lock(graph->neighbors[updates[i].id]));
+		for (size_t j = 0UL; j < vector_size(updates[i].updates); ++j) {
+			c += vector_sorted_insert(graph->neighbors[updates[i].id],
+											 ((Neighbor) {.id = updates[i].updates[j].id, 
+											              .dist = updates[i].updates[j].dist, 
+														  .flag = true}));
+		}
+		omp_unset_lock(vector_lock(graph->neighbors[updates[i].id]));
+
+		for (size_t j = 0UL; j < vector_size(updates[i].updates); ++j) {
+			omp_set_lock(vector_lock(graph->neighbors[updates[i].updates[j].id]));
+			c += vector_sorted_insert(graph->neighbors[updates[i].updates[j].id],
+									 ((Neighbor) {.id = updates[i].id, 
+									  .dist = updates[i].updates[j].dist, 
+									  .flag = true}));
+			omp_unset_lock(vector_lock(graph->neighbors[updates[i].updates[j].id]));
+		}
+		vector_destroy(updates[i].updates);
+	}
+	
+	vector_destroy(updates);
+	return c;
+}
 
 /* Add (sampled) reverse sets to old and new */
-void get_reverse(KNNGraph graph, uint32_t **old, uint32_t **new, uint32_t **old_r, uint32_t **new_r, float sample_rate) {
+void collect_reverse(KNNGraph graph, uint32_t **old, uint32_t **new, uint32_t **old_r, uint32_t **new_r, float sample_rate) {
 	for (size_t v = 0UL; v < graph->points; ++v) {	
 		vector_set_size(old_r[v], 0);
 		vector_set_size(new_r[v], 0);
