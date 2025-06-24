@@ -3,7 +3,7 @@
 
 #define EPSILON 1e-4
 
-RPTree RPTree_create(float *data, uint32_t points, 
+RPTree RPTree_create(float const *data, uint32_t points, 
                      uint32_t dimension, uint32_t leaf_size) {
     RPTree tree = malloc(sizeof(*tree));
     tree->leaf_size = leaf_size;
@@ -16,6 +16,63 @@ RPTree RPTree_create(float *data, uint32_t points,
     return tree;
 }
 
+static void build_hyperplane(float **hyperplane, float *offset, RPTree tree) {
+    /* Choose a hyperplane using 2 unique data points */
+    float offset_ = 0.0;
+    float *hyperplane_ = malloc(tree->dimension * sizeof(float));
+    int ind = rand_r(&tree->seed) % tree->points;
+    int ind_ = rand_r(&tree->seed) % tree->points;
+    while (ind == ind_)
+        ind_ = rand_r(&tree->seed) % tree->points;
+        
+    for (size_t i = 0UL; i < tree->dimension; ++i) {
+        hyperplane_[i] = tree->data[ind * (tree->dimension + 1) + i] - tree->data[ind_ * (tree->dimension + 1) + i];
+        offset_ += hyperplane_[i] * (tree->data[ind * (tree->dimension + 1) + i] + tree->data[ind_ * (tree->dimension+ 1) + i]) / 2;
+    }
+
+    *hyperplane = hyperplane_;
+    *offset = offset_;
+}
+
+static void split(uint32_t **left, uint32_t **right, float *hyperplane, uint32_t *data, float offset, RPTree tree) {
+    uint32_t *left_ = vector_create(uint32_t, VEC_MIN_CAP);
+    uint32_t *right_ = vector_create(uint32_t, VEC_MIN_CAP);
+    for (size_t i = 0; i < vector_size(data); i++) {
+        /* Split data according to their projection onto the hyperplane */
+        float margin = dot_product(hyperplane, &tree->data[data[i] * (tree->dimension + 1)], tree->dimension) - offset;
+        if (margin < -EPSILON) {
+            vector_insert(left_, data[i]);
+        } else if (margin > EPSILON) {
+            vector_insert(right_, data[i]);
+        } else {
+            if (rand_r(&tree->seed) % 2 == 0) {
+                vector_insert(left_, data[i]);
+            } else {
+                vector_insert(right_, data[i]);
+            }
+        }
+    }
+
+    /* If all points fall into one side, split the data randomly 
+     * This is useful for data not well suited to hyperplane splitting
+     * (e.g. data points very close to each other)
+     */
+    if (!vector_size(left_) || !vector_size(right_)) {
+        vector_set_size(left_, 0);
+        vector_set_size(right_, 0);
+        for (size_t i = 0UL; i < vector_size(data); ++i) {
+            if (rand_r(&tree->seed) % 2 == 0) {
+                vector_insert(left_, data[i]);
+            } else {
+                vector_insert(right_, data[i]);
+            }
+        }
+    }
+
+    *left = left_;
+    *right = right_;
+}
+
 static uint32_t tree_split_rec(RPTree tree, uint32_t *data, uint32_t depth) {
     if (depth == tree->leaf_size - 1 && vector_size(data) > tree->leaf_size)
         vector_set_size(data, tree->leaf_size);
@@ -26,53 +83,13 @@ static uint32_t tree_split_rec(RPTree tree, uint32_t *data, uint32_t depth) {
                                                   .data = data}));
         return vector_size(tree->nodes) - 1;
     }
-    uint32_t *left = vector_create(uint32_t, VEC_MIN_CAP);
-    uint32_t *right = vector_create(uint32_t, VEC_MIN_CAP);
 
-    /* Choose a hyperplane using 2 unique data points */
-    float offset = 0.0;
-    float *hyperplane = malloc(tree->dimension * sizeof(float));
-    for (size_t i = 0UL; i < tree->dimension; ++i) {
-        int ind = rand_r(&tree->seed) % tree->points;
-        int ind_ = rand_r(&tree->seed) % tree->points;
-        while (ind == ind_)
-            ind_ = rand_r(&tree->seed) % tree->points;
-        
-        hyperplane[i] = tree->data[ind * (tree->dimension + 1) + i] - tree->data[ind_ * (tree->dimension + 1) + i];
-        offset += hyperplane[i] * (tree->data[ind * (tree->dimension + 1) + i] + tree->data[ind_ * (tree->dimension+ 1) + i]) / 2;
-    }
+    float offset, *hyperplane;
+    build_hyperplane(&hyperplane, &offset, tree);
 
-    for (size_t i = 0; i < vector_size(data); i++) {
-        /* Split data according to their projection onto the hyperplane */
-        float margin = dot_product(hyperplane, &tree->data[data[i] * (tree->dimension + 1)], tree->dimension) - offset;
-        if (margin < -EPSILON) {
-            vector_insert(left, data[i]);
-        } else if (margin > EPSILON) {
-            vector_insert(right, data[i]);
-        } else {
-            if (rand_r(&tree->seed) % 2 == 0) {
-                vector_insert(left, data[i]);
-            } else {
-                vector_insert(right, data[i]);
-            }
-        }
-    }
+    uint32_t *left, *right;
+    split(&left, &right, hyperplane, data, offset, tree);
 
-    /* If all points fall into one side, split the data randomly 
-     * This is useful for data not well suited to hyperplane splitting
-     * (e.g. data points very close to each other)
-     */
-    if (!vector_size(left) || !vector_size(right)) {
-        vector_set_size(left, 0);
-        vector_set_size(right, 0);
-        for (size_t i = 0UL; i < vector_size(data); ++i) {
-            if (rand_r(&tree->seed) % 2 == 0) {
-                vector_insert(left, data[i]);
-            } else {
-                vector_insert(right, data[i]);
-            }
-        }
-    }
     vector_destroy(data);
 
     uint32_t left_ind = tree_split_rec(tree, left, depth + 1);
@@ -107,7 +124,7 @@ void RPTree_destroy(RPTree tree) {
 }
 
 
-RPTree *RPTree_build_forest(uint32_t n_trees, float *data, uint32_t points,
+RPTree *RPTree_build_forest(uint32_t n_trees, float const *data, uint32_t points,
                            uint32_t dimension, uint32_t leaf_size) {
     RPTree *forest = malloc(sizeof(RPTree) * n_trees);
     # pragma omp parallel for num_threads(n_threads)
