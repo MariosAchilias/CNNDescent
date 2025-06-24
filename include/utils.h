@@ -10,9 +10,9 @@ int cmp_ids(Neighbor a, Neighbor b);
 
 bool parse_args(int argc, const char **argv, KnnArgs *args);
 
-float manhattan_dist(float *f1, float *f2, uint32_t dim);
+float manhattan_dist(float const *f1, float const *f2, uint32_t dim);
 
-float euclidean_dist(float *f1, float *f2, uint32_t dim);
+float euclidean_dist(float const *f1, float const *f2, uint32_t dim);
 
 void graph_init(KNNGraph graph);
 
@@ -30,8 +30,8 @@ Neighbor *get_knearest(KNNGraph graph, float *point);
 
 Pair *collect_pairs(uint32_t *old, uint32_t *new_);
 
-float optimized_euclidean(float *f1, float *f2, uint32_t dim);
+float optimized_euclidean(float const *f1, float const *f2, uint32_t dim);
 
-float dot_product(float *f1, float *f2, uint32_t dim);
+float dot_product(float const *f1, float const *f2, uint32_t dim);
 
 #endif /* UTILS_H */

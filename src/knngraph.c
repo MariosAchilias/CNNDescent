@@ -26,15 +26,15 @@ KNNGraph KNNGraph_create(float *data, DistanceFunc dist, uint32_t k,
 }
 
 void KNNGraph_add_point(KNNGraph graph, float *point) {
-	// TODO
-	// float *tmp = malloc((graph->dim + 1) * sizeof(float));
-	// vector_insert(graph->data, tmp);
-	// Neighbor *tmp_ = malloc(sizeof(Neighbor*));
-	// vector_insert(graph->neighbors, tmp_);
+	Neighbor *tmp = malloc(sizeof(Neighbor*));
+	vector_insert(graph->neighbors, tmp);
 
-	// memcpy(graph->data[graph->points], point, graph->dim * sizeof(float));
-	// graph->data[graph->points][graph->dim] = dot_product(point, point, graph->dim);
-	// graph->points++;
+	for (uint32_t i = 0; i < graph->dim; i++) {
+		vector_insert(graph->data, point[i]);
+	}
+
+	vector_insert(graph->data, dot_product(point, point, graph->dim));
+	graph->points++;
 }
 
 /* Build graph by exhaustively computing distances between all pairs of points  */
@@ -80,13 +80,15 @@ void KNNGraph_nndescent(KNNGraph graph, float precision, float sample_rate, uint
 		new_r[v] = vector_create(uint32_t, graph->k);
 	}
 
+	int iter = 0;
+
 	do {
 		c = 0;
 		uint32_t sim = 0;
 
 		collect_sets(graph, old, new, sample_rate);
 		get_reverse(graph, old, new, old_r, new_r, sample_rate);
-		# pragma omp parallel for simd num_threads(n_threads)\
+		# pragma omp parallel for num_threads(n_threads)\
 			reduction(+:c, sim), schedule(nonmonotonic:dynamic, 100)
 		for (size_t v = 0UL; v < graph->points; ++v) {
 			Pair *pairs = collect_pairs(old[v], new[v]);
@@ -123,6 +125,7 @@ void KNNGraph_nndescent(KNNGraph graph, float precision, float sample_rate, uint
 		}
 		graph->similarity_comparisons += sim;
 
+	printf("Iteration %d, changes done: %d\n", ++iter, c);
 	} while (c > precision * ((float) graph->points) * graph->k); /* Early termination */
 
 	for (size_t v = 0UL; v < graph->points; ++v) {

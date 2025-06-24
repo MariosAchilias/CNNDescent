@@ -25,15 +25,8 @@ void import_dataset(KnnArgs *args) {
 	uint32_t numbers = buffer.st_size / sizeof(uint32_t);
 	args->points = (numbers - !args->big_endian) / args->dim;
 
-
 	CHECK_CALL(args->data = malloc(sizeof(float) * (args->dim + 1) * args->points), NULL);
 	for (size_t i = 0UL; i < args->points; ++i) {
-		// args->data[i] = malloc((args->dim + 1) * sizeof(float)), NULL);
-
-		// if (args->big_endian)
-			// for (uint32_t row = 0; row < args->dim; ++row)
-			// 	reverse_bytes(file + offset + row * sizeof(float));
-
 		uint32_t loc = i * (args->dim + 1);
 		memcpy(&args->data[loc], file + offset, size);
 		args->data[loc + args->dim] = dot_product(&args->data[loc], &args->data[loc], args->dim);
@@ -84,7 +77,7 @@ int cmp_ids(Neighbor a, Neighbor b) {
 	return a.id - b.id;
 }
 
-float manhattan_dist(float *f1, float *f2, uint32_t dim) {
+float manhattan_dist(float const *f1, float const *f2, uint32_t dim) {
 	float dist = 0;
 	for (size_t i = 0UL; i < dim; ++i)
 		dist += fabs(f1[i] - f2[i]);
@@ -92,7 +85,7 @@ float manhattan_dist(float *f1, float *f2, uint32_t dim) {
 }
 
 
-float euclidean_dist(float *f1, float *f2, uint32_t dim) {
+float euclidean_dist(float const *f1, float const *f2, uint32_t dim) {
 	double dist = 0;
 	for (size_t i = 0UL; i < dim; ++i) {
 		double res = f1[i] - f2[i];
@@ -102,7 +95,7 @@ float euclidean_dist(float *f1, float *f2, uint32_t dim) {
 }
 
 
-float optimized_euclidean(float *f1, float *f2, uint32_t dim) {
+float optimized_euclidean(float const *f1, float const *f2, uint32_t dim) {
 	return f1[dim] + f2[dim] - 2.0 * dot_product(f1, f2, dim);
 }
 
@@ -313,7 +306,7 @@ void get_reverse(KNNGraph graph, uint32_t **old, uint32_t **new, uint32_t **old_
 	}
 }
 
-float dot_product(float *f1, float *f2, uint32_t dim) {
+float dot_product(float const *f1, float const *f2, uint32_t dim) {
 	float sum1 = 0.0;
 	float sum2 = 0.0;
 	float sum3 = 0.0;

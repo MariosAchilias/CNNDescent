@@ -41,7 +41,7 @@ typedef struct {
 } Pair;
 
 typedef int (*Comparator)(Neighbor a, Neighbor b);
-typedef float (*DistanceFunc)(float *a, float *b, uint32_t dim);
+typedef float (*DistanceFunc)(float const *a, float const *b, uint32_t dim);
 
 
 typedef struct {
