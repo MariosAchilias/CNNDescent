@@ -60,28 +60,20 @@ void KNNGraph_bruteforce(KNNGraph graph) {
 	}
 }
 
-void KNNGraph_nndescent(KNNGraph graph, float precision, float sample_rate, uint32_t n_trees) {
-    uint32_t c;
-	
+static void init_temps(uint32_t ***old_, uint32_t ***new_, uint32_t ***old_r_, uint32_t ***new_r_, uint32_t points, uint32_t k);
+static void cleanup_temps(uint32_t **old, uint32_t **new, uint32_t **old_r, uint32_t **new_r, uint32_t points);
+
+void KNNGraph_nndescent(KNNGraph graph, float precision, float sample_rate, uint32_t n_trees) {	
 	if (n_trees)
 		graph_init_rp(graph, n_trees);
 	else
 		graph_init(graph);
 
-	uint32_t **old = malloc(graph->points * sizeof(*old));
-	uint32_t **new = malloc(graph->points * sizeof(*new));
-	uint32_t **old_r = malloc(graph->points * sizeof(*old));
-	uint32_t **new_r = malloc(graph->points * sizeof(*new));
+	uint32_t **old, **new, **old_r, **new_r;
+	init_temps(&old, &new, &old_r, &new_r, graph->points, graph->k);
 
-	for (size_t v = 0UL; v < graph->points; ++v) {
-		old[v] = vector_create(uint32_t, graph->k);
-		new[v] = vector_create(uint32_t, graph->k);
-		old_r[v] = vector_create(uint32_t, graph->k);
-		new_r[v] = vector_create(uint32_t, graph->k);
-	}
-
-	int iter = 0;
-
+	// int iter = 0;
+    uint32_t c;
 	do {
 		c = 0;
 		uint32_t sim = 0;
@@ -125,20 +117,11 @@ void KNNGraph_nndescent(KNNGraph graph, float precision, float sample_rate, uint
 		}
 		graph->similarity_comparisons += sim;
 
-	printf("Iteration %d, changes done: %d\n", ++iter, c);
+	// printf("Iteration %d, changes done: %d\n", ++iter, c);
 	} while (c > precision * ((float) graph->points) * graph->k); /* Early termination */
 
-	for (size_t v = 0UL; v < graph->points; ++v) {
-		vector_destroy(old[v]);
-		vector_destroy(new[v]);
-		vector_destroy(old_r[v]);
-		vector_destroy(new_r[v]);
-	}
+	cleanup_temps(old, new, old_r, new_r, graph->points);
 
-	free(old);
-	free(new);
-	free(new_r);
-	free(old_r);
 }
 
 /* Return indices of K nearest points */
@@ -267,4 +250,38 @@ void KNNGraph_destroy(KNNGraph graph) {
 
 	vector_destroy(graph->neighbors);
 	free(graph);
+}
+
+
+static void init_temps(uint32_t ***old_, uint32_t ***new_, uint32_t ***old_r_, uint32_t ***new_r_, uint32_t points, uint32_t k) {
+	uint32_t **old = malloc(points * sizeof(*old));
+	uint32_t **new = malloc(points * sizeof(*new));
+	uint32_t **old_r = malloc(points * sizeof(*old));
+	uint32_t **new_r = malloc(points * sizeof(*new));
+
+	for (size_t v = 0UL; v < points; ++v) {
+		old[v] = vector_create(uint32_t, k);
+		new[v] = vector_create(uint32_t, k);
+		old_r[v] = vector_create(uint32_t, k);
+		new_r[v] = vector_create(uint32_t, k);
+	}
+
+	*old_ = old;
+	*new_ = new;
+	*new_r_ = new_r;
+	*old_r_ = old_r;
+}
+
+static void cleanup_temps(uint32_t **old, uint32_t **new, uint32_t **old_r, uint32_t **new_r, uint32_t points) {
+	for (size_t v = 0UL; v < points; ++v) {
+		vector_destroy(old[v]);
+		vector_destroy(new[v]);
+		vector_destroy(old_r[v]);
+		vector_destroy(new_r[v]);
+	}
+
+	free(old);
+	free(new);
+	free(new_r);
+	free(old_r);
 }
